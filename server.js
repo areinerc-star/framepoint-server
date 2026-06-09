@@ -12,8 +12,26 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-// ── In-memory booking store (replace with DB later if needed)
-const bookings = {};
+// ── File-based booking store (persists across restarts)
+const fs = require('fs');
+const path = require('path');
+const DB_FILE = path.join(__dirname, 'bookings.json');
+
+function loadBookings() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    }
+  } catch(e) { console.error('Error loading bookings:', e); }
+  return {};
+}
+
+function saveBookings(data) {
+  try { fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2)); }
+  catch(e) { console.error('Error saving bookings:', e); }
+}
+
+const bookings = loadBookings();
 
 // ── Email transporter (Gmail SMTP)
 const transporter = nodemailer.createTransport({
@@ -254,6 +272,7 @@ app.post('/booking', async (req, res) => {
     const b = req.body;
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
     bookings[id] = { ...b, id, status: 'pending', submittedAt: new Date().toISOString() };
+    saveBookings(bookings);
 
     const baseUrl = process.env.BASE_URL || `https://${req.headers.host}`;
     const approveUrl = `${baseUrl}/approve/${id}`;
@@ -281,6 +300,7 @@ app.get('/approve/:id', async (req, res) => {
   if (b.status !== 'pending') return res.send(adminPage('Already Processed', `This booking was already marked as <strong>${b.status}</strong>.`, false));
 
   b.status = 'approved';
+  saveBookings(bookings);
 
   try {
     await transporter.sendMail({
@@ -343,6 +363,7 @@ app.post('/deny/:id', async (req, res) => {
   if (!b) return res.send(adminPage('Not Found', 'Booking not found.', false));
 
   b.status = 'denied';
+  saveBookings(bookings);
   const reason = req.body.reason || 'The requested date is unavailable.';
 
   try {
@@ -407,6 +428,7 @@ app.post('/admin/approve/:id', adminAuth, async (req, res) => {
   if (!b) return res.status(404).json({ error: 'Not found' });
   if (b.status !== 'pending') return res.status(400).json({ error: 'Already processed' });
   b.status = 'approved';
+  saveBookings(bookings);
   try {
     await transporter.sendMail({
       from: `"Frame-Point Photography" <${process.env.GMAIL_USER}>`,
@@ -426,6 +448,7 @@ app.post('/admin/deny/:id', adminAuth, async (req, res) => {
   if (!b) return res.status(404).json({ error: 'Not found' });
   if (b.status !== 'pending') return res.status(400).json({ error: 'Already processed' });
   b.status = 'denied';
+  saveBookings(bookings);
   const reason = req.body.reason || 'The requested date is unavailable.';
   try {
     await transporter.sendMail({
@@ -440,5 +463,17 @@ app.post('/admin/deny/:id', adminAuth, async (req, res) => {
   }
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Frame-Point server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Frame-Point server running on port ${PORT}`);
+  // Self-ping every 4 minutes to prevent Railway cold starts
+  const baseUrl = process.env.BASE_URL;
+  if (baseUrl) {
+    setInterval(() => {
+      fetch(baseUrl + '/health').catch(() => {});
+    }, 4 * 60 * 1000);
+  }
+});
