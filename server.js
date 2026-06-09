@@ -5,7 +5,12 @@ const cors = require('cors');
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-admin-token'],
+}));
+app.options('*', cors());
 
 // ── In-memory booking store (replace with DB later if needed)
 const bookings = {};
@@ -362,6 +367,78 @@ function adminPage(title, message, success) {
 .icon{font-size:40px;margin-bottom:14px;}h2{font-size:20px;color:#1c1c1e;margin-bottom:10px;}p{font-size:14px;color:#6e6e73;line-height:1.6;}</style></head>
 <body><div class="card"><div class="icon">${success ? '✅' : '❌'}</div><h2>${title}</h2><p>${message}</p></div></body></html>`;
 }
+
+
+// ════════════════════════════════════════════════
+// ADMIN DASHBOARD
+// ════════════════════════════════════════════════
+
+const ADMIN_PASS = process.env.ADMIN_PASS || 'framepoint2026';
+
+// Simple token auth middleware
+function adminAuth(req, res, next) {
+  const token = req.headers['x-admin-token'] || req.query.token;
+  if (token === ADMIN_PASS) return next();
+  res.status(401).json({ error: 'Unauthorized' });
+}
+
+// GET /admin/bookings — return all bookings as JSON
+app.get('/admin/bookings', adminAuth, (req, res) => {
+  const list = Object.values(bookings).sort((a, b) =>
+    new Date(b.submittedAt) - new Date(a.submittedAt)
+  );
+  res.json(list);
+});
+
+// GET /admin/stats — summary counts
+app.get('/admin/stats', adminAuth, (req, res) => {
+  const list = Object.values(bookings);
+  res.json({
+    total:    list.length,
+    pending:  list.filter(b => b.status === 'pending').length,
+    approved: list.filter(b => b.status === 'approved').length,
+    denied:   list.filter(b => b.status === 'denied').length,
+  });
+});
+
+// POST /admin/approve/:id — approve from dashboard
+app.post('/admin/approve/:id', adminAuth, async (req, res) => {
+  const b = bookings[req.params.id];
+  if (!b) return res.status(404).json({ error: 'Not found' });
+  if (b.status !== 'pending') return res.status(400).json({ error: 'Already processed' });
+  b.status = 'approved';
+  try {
+    await transporter.sendMail({
+      from: `"Frame-Point Photography" <${process.env.GMAIL_USER}>`,
+      to:   b.email,
+      subject: '✅ Your Session is Confirmed — Frame-Point Photography',
+      html: buildApprovalEmail(b),
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /admin/deny/:id — deny with reason from dashboard
+app.post('/admin/deny/:id', adminAuth, async (req, res) => {
+  const b = bookings[req.params.id];
+  if (!b) return res.status(404).json({ error: 'Not found' });
+  if (b.status !== 'pending') return res.status(400).json({ error: 'Already processed' });
+  b.status = 'denied';
+  const reason = req.body.reason || 'The requested date is unavailable.';
+  try {
+    await transporter.sendMail({
+      from: `"Frame-Point Photography" <${process.env.GMAIL_USER}>`,
+      to:   b.email,
+      subject: '📋 Booking Request Update — Frame-Point Photography',
+      html: buildDenialEmail(b, reason),
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Frame-Point server running on port ${PORT}`));
