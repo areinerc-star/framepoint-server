@@ -463,6 +463,15 @@ app.post('/admin/deny/:id', adminAuth, async (req, res) => {
   }
 });
 
+// DELETE /admin/booking/:id
+app.delete('/admin/booking/:id', adminAuth, (req, res) => {
+  const id = req.params.id;
+  if (!bookings[id]) return res.status(404).json({ error: 'Not found' });
+  delete bookings[id];
+  saveBookings(bookings);
+  res.json({ success: true });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 
