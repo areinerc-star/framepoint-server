@@ -34,7 +34,7 @@ function saveBookings(data) {
 const bookings = loadBookings();
 
 // ── Make.com webhook trigger
-const MAKE_WEBHOOK = 'https://hook.us2.make.com/foebgphrfqb15n96k6hmyvsi2v6857tf';
+const MAKE_WEBHOOK = 'https://hook.us2.make.com/66idvdk88i8q4ss42hzacc754icb77wn';
 
 async function triggerMake(payload) {
   const res = await fetch(MAKE_WEBHOOK, {
