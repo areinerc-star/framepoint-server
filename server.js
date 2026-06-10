@@ -33,26 +33,19 @@ function saveBookings(data) {
 
 const bookings = loadBookings();
 
-// ── Resend email sender
-async function sendEmail({ to, subject, html }) {
-  const res = await fetch('https://api.resend.com/emails', {
+// ── Make.com webhook trigger
+const MAKE_WEBHOOK = 'https://hook.us2.make.com/foebgphrfqb15n96k6hmyvsi2v6857tf';
+
+async function triggerMake(payload) {
+  const res = await fetch(MAKE_WEBHOOK, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'Frame-Point Photography <onboarding@resend.dev>',
-      to,
-      subject,
-      html,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error('Resend error: ' + err);
+    throw new Error('Make webhook error: ' + err);
   }
-  return res.json();
 }
 
 // ── Brand colors (used in email templates)
@@ -291,11 +284,22 @@ app.post('/booking', async (req, res) => {
     const approveUrl = `${baseUrl}/approve/${id}`;
     const denyUrl    = `${baseUrl}/deny-page/${id}`;
 
-    // Email to business
-    await sendEmail({
-      to:      process.env.BUSINESS_EMAIL,
-      subject: `📸 New Booking Request — ${b.firstName} ${b.lastName} | ${b.date}`,
-      html:    buildBusinessEmail(b, approveUrl, denyUrl),
+    // Notify business via Make.com
+    await triggerMake({
+      type:       'new_booking',
+      to:         process.env.BUSINESS_EMAIL,
+      firstName:  b.firstName,
+      lastName:   b.lastName,
+      date:       b.date,
+      time:       b.time,
+      occasion:   b.occasion,
+      phone:      b.phone,
+      email:      b.email,
+      city:       b.city,
+      venue:      b.venue || '',
+      address:    b.address || '',
+      approveUrl,
+      denyUrl,
     });
 
     res.json({ success: true, id });
@@ -315,10 +319,15 @@ app.get('/approve/:id', async (req, res) => {
   saveBookings(bookings);
 
   try {
-    await sendEmail({
-      to:      b.email,
-      subject: `✅ Your Session is Confirmed — Frame-Point Photography`,
-      html:    buildApprovalEmail(b),
+    await triggerMake({
+      type:      'approved',
+      to:        b.email,
+      firstName: b.firstName,
+      lastName:  b.lastName,
+      date:      b.date,
+      time:      b.time,
+      occasion:  b.occasion,
+      city:      b.city,
     });
     res.send(adminPage('Booking Approved ✓', `Confirmation email sent to <strong>${b.email}</strong>.<br><br>
       <strong>${b.firstName} ${b.lastName}</strong> — ${b.date} at ${b.time}`, true));
@@ -378,10 +387,16 @@ app.post('/deny/:id', async (req, res) => {
   const reason = req.body.reason || 'The requested date is unavailable.';
 
   try {
-    await sendEmail({
-      to:      b.email,
-      subject: `📋 Booking Request Update — Frame-Point Photography`,
-      html:    buildDenialEmail(b, reason),
+    await triggerMake({
+      type:      'denied',
+      to:        b.email,
+      firstName: b.firstName,
+      lastName:  b.lastName,
+      date:      b.date,
+      time:      b.time,
+      occasion:  b.occasion,
+      city:      b.city,
+      reason,
     });
     res.send(adminPage('Denial Sent ✓', `Denial email with reason sent to <strong>${b.email}</strong>.`, true));
   } catch (err) {
@@ -440,10 +455,15 @@ app.post('/admin/approve/:id', adminAuth, async (req, res) => {
   b.status = 'approved';
   saveBookings(bookings);
   try {
-    await sendEmail({
-      to:      b.email,
-      subject: '✅ Your Session is Confirmed — Frame-Point Photography',
-      html:    buildApprovalEmail(b),
+    await triggerMake({
+      type:      'approved',
+      to:        b.email,
+      firstName: b.firstName,
+      lastName:  b.lastName,
+      date:      b.date,
+      time:      b.time,
+      occasion:  b.occasion,
+      city:      b.city,
     });
     res.json({ success: true });
   } catch (err) {
@@ -460,10 +480,16 @@ app.post('/admin/deny/:id', adminAuth, async (req, res) => {
   saveBookings(bookings);
   const reason = req.body.reason || 'The requested date is unavailable.';
   try {
-    await sendEmail({
-      to:      b.email,
-      subject: '📋 Booking Request Update — Frame-Point Photography',
-      html:    buildDenialEmail(b, reason),
+    await triggerMake({
+      type:      'denied',
+      to:        b.email,
+      firstName: b.firstName,
+      lastName:  b.lastName,
+      date:      b.date,
+      time:      b.time,
+      occasion:  b.occasion,
+      city:      b.city,
+      reason,
     });
     res.json({ success: true });
   } catch (err) {
