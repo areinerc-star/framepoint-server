@@ -38,7 +38,6 @@ async function triggerMake(payload) {
   if (!res.ok) throw new Error('Make webhook error: ' + await res.text());
 }
 
-// ── Admin response page (dark brand, no logo)
 function adminPage(title, message, success) {
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${title}</title>
@@ -73,8 +72,9 @@ strong{color:#ffffff;}
 </body></html>`;
 }
 
-// ── Routes
-
+// POST /booking — client submits booking
+// Sends to Make.com: type, to, firstName, lastName, date, time, occasion,
+// phone, email, city, venue, address, duration, startTime, endTime, approveUrl, denyUrl
 app.post('/booking', async (req, res) => {
   try {
     const b = req.body;
@@ -85,10 +85,23 @@ app.post('/booking', async (req, res) => {
     const approveUrl = `${baseUrl}/approve/${id}`;
     const denyUrl    = `${baseUrl}/deny-page/${id}`;
     await triggerMake({
-      type: 'new_booking', to: process.env.BUSINESS_EMAIL,
-      firstName: b.firstName, lastName: b.lastName, date: b.date, time: b.time,
-      occasion: b.occasion, phone: b.phone, email: b.email, city: b.city,
-      venue: b.venue || '', address: b.address || '', duration: b.duration || '02:00',
+      type:       'new_booking',
+      to:         process.env.BUSINESS_EMAIL,
+      firstName:  b.firstName,
+      lastName:   b.lastName,
+      date:       b.date,
+      time:       b.time,
+      occasion:   b.occasion,
+      phone:      b.phone,
+      email:      b.email,
+      city:       b.city,
+      venue:      b.venue || '',
+      address:    b.address || '',
+      duration:   b.duration || '02:00',
+      startTime:  b.startTime || '',
+      endTime:    b.endTime || '',
+      approveUrl,
+      denyUrl,
     });
     res.json({ success: true, id });
   } catch (err) {
@@ -104,8 +117,6 @@ app.get('/approve/:id', async (req, res) => {
   b.status = 'approved';
   saveBookings(bookings);
 
-  // Build Google Calendar URL
-  // Parse date like "June 13, 2026" and time like "7:00 AM - 9:00 AM"
   let calUrl = '';
   try {
     const dateStr = b.date;
@@ -120,16 +131,24 @@ app.get('/approve/:id', async (req, res) => {
     const start = toISO(dateStr, startTime);
     const end   = toISO(dateStr, endTime);
     const title = encodeURIComponent(`Photography Session — Frame-Point`);
-    const details = encodeURIComponent(`Your photography session with Frame-Point Photography has been confirmed!\n\nOccasion: ${b.occasion}\nLocation: ${b.city}`);
+    const details = encodeURIComponent(`Confirmed session\nOccasion: ${b.occasion}\nLocation: ${b.city}`);
     const location = encodeURIComponent(b.city || '');
     calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${location}`;
   } catch(e) { calUrl = 'https://calendar.google.com'; }
 
   try {
     await triggerMake({
-      type: 'approved', to: b.email,
-      firstName: b.firstName, lastName: b.lastName,
-      date: b.date, time: b.time, occasion: b.occasion, city: b.city,
+      type:      'approved',
+      to:        b.email,
+      firstName: b.firstName,
+      lastName:  b.lastName,
+      date:      b.date,
+      time:      b.time,
+      occasion:  b.occasion,
+      city:      b.city,
+      duration:  b.duration || '02:00',
+      startTime: b.startTime || '',
+      endTime:   b.endTime || '',
       calUrl,
     });
     res.send(adminPage('Booking Approved', `Confirmation email sent to <strong>${b.email}</strong>.<br><br><strong>${b.firstName} ${b.lastName}</strong> — ${b.date} at ${b.time}`, true));
@@ -189,7 +208,7 @@ app.get('/deny-page/:id', (req, res) => {
   </div>
   <form method="POST" action="/deny/${req.params.id}">
     <label>Reason for Denial</label>
-    <textarea name="reason" placeholder="e.g. The requested date is already fully booked. We apologize for the inconvenience..."></textarea>
+    <textarea name="reason" placeholder="e.g. The requested date is already fully booked..."></textarea>
     <button type="submit">✗ Send Denial Email</button>
   </form>
 </div>
@@ -215,7 +234,6 @@ app.post('/deny/:id', async (req, res) => {
   }
 });
 
-// ── Admin API
 const ADMIN_PASS = process.env.ADMIN_PASS || 'framepoint2026';
 
 function adminAuth(req, res, next) {
@@ -250,6 +268,7 @@ app.post('/admin/approve/:id', adminAuth, async (req, res) => {
       type: 'approved', to: b.email,
       firstName: b.firstName, lastName: b.lastName,
       date: b.date, time: b.time, occasion: b.occasion, city: b.city,
+      duration: b.duration || '02:00', startTime: b.startTime || '', endTime: b.endTime || '',
     });
     res.json({ success: true });
   } catch (err) {
