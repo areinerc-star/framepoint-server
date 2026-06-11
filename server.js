@@ -88,7 +88,7 @@ app.post('/booking', async (req, res) => {
       type: 'new_booking', to: process.env.BUSINESS_EMAIL,
       firstName: b.firstName, lastName: b.lastName, date: b.date, time: b.time,
       occasion: b.occasion, phone: b.phone, email: b.email, city: b.city,
-      venue: b.venue || '', address: b.address || '', approveUrl, denyUrl,
+      venue: b.venue || '', address: b.address || '', duration: b.duration || '02:00',
     });
     res.json({ success: true, id });
   } catch (err) {
