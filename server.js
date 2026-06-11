@@ -27,7 +27,6 @@ function saveBookings(data) {
 }
 
 const bookings = loadBookings();
-
 const MAKE_WEBHOOK = 'https://hook.us2.make.com/66idvdk88i8q4ss42hzacc754icb77wn';
 
 async function triggerMake(payload) {
@@ -36,13 +35,10 @@ async function triggerMake(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error('Make webhook error: ' + err);
-  }
+  if (!res.ok) throw new Error('Make webhook error: ' + await res.text());
 }
 
-// ── Helper: admin response page (dark brand style)
+// ── Admin response page (dark brand, no logo)
 function adminPage(title, message, success) {
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${title}</title>
@@ -52,11 +48,10 @@ body{font-family:Arial,sans-serif;background:#1c1c1e;min-height:100vh;display:fl
 .card{background:#2a2a2a;border-radius:20px;padding:40px 32px;max-width:440px;width:100%;text-align:center;border:1px solid #3a3a3c;}
 .icon{margin-bottom:20px;}
 .icon svg{width:64px;height:64px;}
-.logo{margin-bottom:8px;}
 h2{font-size:20px;color:#ffffff;margin-bottom:10px;letter-spacing:1px;}
 p{font-size:14px;color:#aeaeb2;line-height:1.6;}
 strong{color:#ffffff;}
-.gold-line{width:40px;height:2px;background:#b89a5a;margin:12px auto 20px;}
+.gold-line{width:40px;height:2px;background:#b89a5a;margin:0 auto 20px;}
 </style></head>
 <body>
 <div class="card">
@@ -71,21 +66,6 @@ strong{color:#ffffff;}
       <path d="M22 22 L42 42 M42 22 L22 42" fill="none" stroke="#e8b4b4" stroke-width="3" stroke-linecap="round"/>
     </svg>`}
   </div>
-  <div class="logo">
-    <svg width="28" height="32" viewBox="-90 -110 180 210" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,-90 C-45,-90 -72,-55 -72,-22 C-72,18 -40,55 0,90 C40,55 72,18 72,-22 C72,-55 45,-90 0,-90 Z" fill="none" stroke="#b89a5a" stroke-width="3"/>
-      <circle cx="0" cy="-22" r="48" fill="none" stroke="#b89a5a" stroke-width="2.5"/>
-      <circle cx="0" cy="-22" r="28" fill="none" stroke="#b89a5a" stroke-width="1.5"/>
-      <path d="M0,-18 C5,-10 6,0 3,6 C1,9 -1,9 -3,6 C-6,0 -5,-10 0,-18Z" fill="#b89a5a" transform="translate(0,-22) rotate(0)"/>
-      <path d="M0,-18 C5,-10 6,0 3,6 C1,9 -1,9 -3,6 C-6,0 -5,-10 0,-18Z" fill="#b89a5a" transform="translate(0,-22) rotate(60)"/>
-      <path d="M0,-18 C5,-10 6,0 3,6 C1,9 -1,9 -3,6 C-6,0 -5,-10 0,-18Z" fill="#b89a5a" transform="translate(0,-22) rotate(120)"/>
-      <path d="M0,-18 C5,-10 6,0 3,6 C1,9 -1,9 -3,6 C-6,0 -5,-10 0,-18Z" fill="#b89a5a" transform="translate(0,-22) rotate(180)"/>
-      <path d="M0,-18 C5,-10 6,0 3,6 C1,9 -1,9 -3,6 C-6,0 -5,-10 0,-18Z" fill="#b89a5a" transform="translate(0,-22) rotate(240)"/>
-      <path d="M0,-18 C5,-10 6,0 3,6 C1,9 -1,9 -3,6 C-6,0 -5,-10 0,-18Z" fill="#b89a5a" transform="translate(0,-22) rotate(300)"/>
-      <circle cx="0" cy="-22" r="5" fill="#b89a5a"/>
-      <circle cx="0" cy="-22" r="2.5" fill="#2a2a2a"/>
-    </svg>
-  </div>
   <div class="gold-line"></div>
   <h2>${title}</h2>
   <p>${message}</p>
@@ -93,7 +73,7 @@ strong{color:#ffffff;}
 </body></html>`;
 }
 
-// ── ROUTES
+// ── Routes
 
 app.post('/booking', async (req, res) => {
   try {
@@ -123,10 +103,34 @@ app.get('/approve/:id', async (req, res) => {
   if (b.status !== 'pending') return res.send(adminPage('Already Processed', `This booking was already marked as <strong>${b.status}</strong>.`, false));
   b.status = 'approved';
   saveBookings(bookings);
+
+  // Build Google Calendar URL
+  // Parse date like "June 13, 2026" and time like "7:00 AM - 9:00 AM"
+  let calUrl = '';
+  try {
+    const dateStr = b.date;
+    const timeStr = b.time || '';
+    const times = timeStr.split(/[-–]/);
+    const startTime = times[0] ? times[0].trim() : '09:00 AM';
+    const endTime   = times[1] ? times[1].trim() : '10:00 AM';
+    const toISO = (d, t) => {
+      const dt = new Date(`${d} ${t}`);
+      return dt.toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+    };
+    const start = toISO(dateStr, startTime);
+    const end   = toISO(dateStr, endTime);
+    const title = encodeURIComponent(`Photography Session — Frame-Point`);
+    const details = encodeURIComponent(`Your photography session with Frame-Point Photography has been confirmed!\n\nOccasion: ${b.occasion}\nLocation: ${b.city}`);
+    const location = encodeURIComponent(b.city || '');
+    calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${location}`;
+  } catch(e) { calUrl = 'https://calendar.google.com'; }
+
   try {
     await triggerMake({
-      type: 'approved', to: b.email, firstName: b.firstName, lastName: b.lastName,
+      type: 'approved', to: b.email,
+      firstName: b.firstName, lastName: b.lastName,
       date: b.date, time: b.time, occasion: b.occasion, city: b.city,
+      calUrl,
     });
     res.send(adminPage('Booking Approved', `Confirmation email sent to <strong>${b.email}</strong>.<br><br><strong>${b.firstName} ${b.lastName}</strong> — ${b.date} at ${b.time}`, true));
   } catch (err) {
@@ -201,7 +205,8 @@ app.post('/deny/:id', async (req, res) => {
   const reason = req.body.reason || 'The requested date is unavailable.';
   try {
     await triggerMake({
-      type: 'denied', to: b.email, firstName: b.firstName, lastName: b.lastName,
+      type: 'denied', to: b.email,
+      firstName: b.firstName, lastName: b.lastName,
       date: b.date, time: b.time, occasion: b.occasion, city: b.city, reason,
     });
     res.send(adminPage('Denial Sent', `Denial email sent to <strong>${b.email}</strong>.`, true));
@@ -210,7 +215,7 @@ app.post('/deny/:id', async (req, res) => {
   }
 });
 
-// ── ADMIN API
+// ── Admin API
 const ADMIN_PASS = process.env.ADMIN_PASS || 'framepoint2026';
 
 function adminAuth(req, res, next) {
@@ -242,7 +247,8 @@ app.post('/admin/approve/:id', adminAuth, async (req, res) => {
   saveBookings(bookings);
   try {
     await triggerMake({
-      type: 'approved', to: b.email, firstName: b.firstName, lastName: b.lastName,
+      type: 'approved', to: b.email,
+      firstName: b.firstName, lastName: b.lastName,
       date: b.date, time: b.time, occasion: b.occasion, city: b.city,
     });
     res.json({ success: true });
@@ -260,7 +266,8 @@ app.post('/admin/deny/:id', adminAuth, async (req, res) => {
   const reason = req.body.reason || 'The requested date is unavailable.';
   try {
     await triggerMake({
-      type: 'denied', to: b.email, firstName: b.firstName, lastName: b.lastName,
+      type: 'denied', to: b.email,
+      firstName: b.firstName, lastName: b.lastName,
       date: b.date, time: b.time, occasion: b.occasion, city: b.city, reason,
     });
     res.json({ success: true });
