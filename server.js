@@ -73,8 +73,6 @@ strong{color:#ffffff;}
 }
 
 // POST /booking — client submits booking
-// Sends to Make.com: type, to, firstName, lastName, date, time, occasion,
-// phone, email, city, venue, address, duration, startTime, endTime, approveUrl, denyUrl
 app.post('/booking', async (req, res) => {
   try {
     const b = req.body;
@@ -126,7 +124,7 @@ app.get('/approve/:id', async (req, res) => {
     const endTime   = times[1] ? times[1].trim() : '10:00 AM';
     const toISO = (d, t) => {
       const dt = new Date(`${d} ${t}`);
-      return dt.toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+      return dt.toISOString().slice(0, 19);
     };
     const start = toISO(dateStr, startTime);
     const end   = toISO(dateStr, endTime);
