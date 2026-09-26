@@ -1,24 +1,996 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Framepoint Server API</title>
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-    .card { background: #1e293b; padding: 2.5rem; border-radius: 12px; text-align: center; border: 1px solid #334155; max-width: 450px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); }
-    h1 { margin-top: 0; color: #10b981; font-size: 1.5rem; }
-    p { color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }
-    .status-badge { display: inline-block; background: #064e3b; color: #34d399; padding: 4px 12px; border-radius: 9999px; font-weight: 600; font-size: 0.85rem; margin-bottom: 1rem; }
-    code { background: #0f172a; color: #38bdf8; padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.9rem; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Your Session – Frame-Point Photography</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --charcoal:   #1c1c1e;
+    --charcoal-2: #2c2c2e;
+    --charcoal-3: #3a3a3c;
+    --mid:        #6e6e73;
+    --light:      #aeaeb2;
+    --divider:    #e5e0d8;
+    --surface:    #f9f7f4;
+    --paper:      #ffffff;
+    --gold:       #b89a5a;
+    --gold-light: #f0e6cc;
+    --gold-dark:  #8a6f38;
+
+    --avail-bg:   #eaf4ee; --avail-text: #2a6b42; --avail-border: #b2d9be;
+    --partial-bg: #ddeeff; --partial-text: #1a4f8a; --partial-border: #a8c8f0;
+    --full-bg:    #faeaea; --full-text:  #a83232; --full-border:  #e8b4b4;
+    --block-bg:   #eeece8; --block-text: #666;    --block-border: #ccc;
+  }
+
+  body {
+    font-family: 'Raleway', system-ui, sans-serif;
+    background: var(--surface);
+    color: var(--charcoal);
+    min-height: 100vh;
+  }
+
+  /* TOP BAR */
+  .top-bar {
+    background: var(--charcoal);
+    padding: 0 32px;
+    display: flex; align-items: center; gap: 16px;
+    height: 48px; position: relative;
+  }
+  .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--charcoal-3); background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--light); font-size: 16px;
+    transition: border-color .15s, color .15s; flex-shrink: 0;
+  }
+  .back-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .logo-wrap {
+    display: flex; align-items: center; gap: 0px;
+  }
+  .logo-img {
+    height: 52px; width: auto;
+    filter: invert(1) brightness(2);
+    object-fit: contain;
+  }
+
+  .page-title { margin-left: auto; text-align: right; }
+  .page-title-main { font-size: 13px; font-weight: 500; color: var(--paper); }
+  .page-title-sub  { font-size: 11px; color: var(--light); margin-top: 2px; }
+
+  /* LAYOUT */
+  .layout {
+    display: grid; grid-template-columns: 1.1fr 0.9fr;
+    gap: 20px; padding: 24px 32px 40px; max-width: 1080px;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--paper); border: 1px solid var(--divider);
+    border-radius: 16px; padding: 24px;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px; font-weight: 400; color: var(--charcoal); letter-spacing: .08em;
+  }
+
+  /* CALENDAR NAV */
+  .cal-nav-btn {
+    background: none; border: 1px solid var(--divider); border-radius: 6px;
+    cursor: pointer; color: var(--mid); font-size: 14px;
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    transition: border-color .15s, color .15s;
+  }
+  .cal-nav-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .cal-nav-wrap { display: flex; align-items: center; gap: 10px; }
+
+  /* LEGEND */
+  .legend-title {
+    font-size: 9px; font-weight: 500; letter-spacing: .1em;
+    color: var(--light); text-transform: uppercase; margin-bottom: 10px;
+  }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px 16px;
+    padding-bottom: 16px; border-bottom: 1px solid var(--divider); margin-bottom: 18px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--mid); }
+  .legend-dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+
+  /* CALENDAR GRID */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .day-header {
+    font-size: 10px; color: var(--light); text-align: center;
+    padding: 4px 0; font-weight: 500; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .day-cell {
+    aspect-ratio: 1; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 400; cursor: pointer;
+    transition: transform .12s, box-shadow .12s;
+    position: relative; user-select: none; border: 1px solid transparent;
+  }
+  .day-cell:hover { transform: scale(1.08); z-index: 1; }
+  .day-cell.empty   { background: none; cursor: default; pointer-events: none; }
+  .day-cell.sunday  { background: var(--block-bg); color: var(--block-text); border-color: var(--block-border); cursor: not-allowed; opacity: .55; }
+  .day-cell.sunday:hover { transform: none; }
+  .day-cell.today   { font-weight: 600; box-shadow: 0 0 0 2px var(--gold); }
+  .day-cell.avail      { background: var(--avail-bg);   color: var(--avail-text);   border-color: var(--avail-border); }
+  .day-cell.partial    { background: var(--partial-bg); color: var(--partial-text); border-color: var(--partial-border); }
+  .day-cell.full       { background: var(--full-bg);    color: var(--full-text);    border-color: var(--full-border); }
+  .day-cell.blocked    { background: var(--block-bg);   color: var(--block-text);   border-color: var(--block-border); cursor: not-allowed; }
+  .day-cell.blocked:hover { transform: none; }
+  .day-cell.selected   { box-shadow: 0 0 0 2.5px var(--gold-dark); transform: scale(1.08); z-index: 1; }
+
+  /* RIGHT PANEL */
+  .right-placeholder {
+    color: var(--light); font-size: 13px; text-align: center;
+    padding: 52px 16px; line-height: 1.7;
+  }
+  .selected-info { display: none; }
+  .selected-info.active { display: block; }
+  .detail-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; padding: 11px 0; border-bottom: 1px solid var(--divider);
+  }
+  .detail-label { color: var(--mid); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .detail-val   { font-weight: 500; color: var(--charcoal); }
+  .status-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge-avail   { background: var(--avail-bg);   color: var(--avail-text); }
+  .badge-partial { background: var(--partial-bg); color: var(--partial-text); }
+  .badge-full    { background: var(--full-bg);    color: var(--full-text); }
+  .badge-block   { background: var(--block-bg);   color: var(--block-text); }
+
+  /* SESSION TYPE INPUT */
+  .input-section { margin-top: 14px; border-top: 1px solid var(--divider); padding-top: 14px; }
+  .input-label {
+    font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--mid); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .input-label i { font-size: 13px; color: var(--gold); }
+  .session-input {
+    width: 100%; padding: 10px 13px;
+    border: 1px solid var(--divider); border-radius: 8px;
+    font-family: 'Raleway', sans-serif; font-size: 13px; color: var(--charcoal);
+    background: var(--surface); outline: none;
+    transition: border-color .15s;
+  }
+  .session-input:focus { border-color: var(--gold); }
+  .session-input::placeholder { color: var(--light); }
+
+  /* TIME PICKER */
+  .time-section { margin-top: 14px; border-top: 1px solid var(--divider); padding-top: 14px; }
+  .time-label {
+    font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--mid); margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
+  }
+  .time-label i { font-size: 13px; color: var(--gold); }
+  .time-note { font-size: 11px; color: var(--light); margin-bottom: 10px; }
+  .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .time-slot {
+    padding: 8px 4px; border: 1px solid var(--divider); border-radius: 8px;
+    font-size: 12px; font-weight: 400; text-align: center; cursor: pointer;
+    color: var(--charcoal); background: var(--surface);
+    transition: border-color .15s, background .15s, color .15s; user-select: none;
+  }
+  .time-slot:hover:not(.taken) { border-color: var(--gold); color: var(--gold-dark); background: var(--gold-light); }
+  .time-slot.active { border-color: var(--gold-dark); background: var(--gold-light); color: var(--gold-dark); font-weight: 500; }
+  .time-slot.taken { background: var(--full-bg); color: var(--full-text); border-color: var(--full-border); cursor: not-allowed; font-size: 11px; }
+  /* Collapsible time sections */
+  .collapsible-header {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; padding: 9px 12px;
+    border: 1px solid var(--divider); border-radius: 8px;
+    background: var(--surface); user-select: none;
+    transition: border-color .15s, background .15s;
+    margin-bottom: 6px;
+  }
+  .collapsible-header:hover { border-color: var(--gold); }
+  .collapsible-header.has-value { border-color: var(--gold-dark); background: var(--gold-light); }
+  .collapsible-header-label { font-size: 12px; font-weight: 500; color: var(--charcoal); }
+  .collapsible-header-value { font-size: 12px; color: var(--gold-dark); font-weight: 500; }
+  .collapsible-arrow { font-size: 10px; color: var(--mid); transition: transform .2s; }
+  .collapsible-arrow.open { transform: rotate(180deg); }
+  .collapsible-body { display: none; margin-bottom: 10px; }
+  .collapsible-body.open { display: block; }
+  .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 0 4px; }
+
+  /* BOOK BUTTON */
+  .book-btn {
+    margin-top: 20px; width: 100%; padding: 13px;
+    background: var(--charcoal); color: var(--paper);
+    border: none; border-radius: 10px;
+    font-family: 'Raleway', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; letter-spacing: .04em; transition: background .15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .book-btn:hover:not(:disabled) { background: var(--charcoal-3); }
+  .book-btn:disabled { background: var(--block-bg); color: var(--light); cursor: not-allowed; }
+
+  .gold-rule {
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold) 0%, transparent 100%);
+    border: none; margin: 0 0 20px; border-radius: 2px; width: 48px;
+  }
+
+  /* FORM FIELDS IN MODAL */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+  .form-grid.full { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-label {
+    font-size: 10px; font-weight: 500; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--mid);
+  }
+  .form-input {
+    width: 100%; padding: 9px 12px;
+    border: 1px solid var(--divider); border-radius: 8px;
+    font-family: 'Raleway', sans-serif; font-size: 13px;
+    color: var(--charcoal); background: var(--surface);
+    outline: none; transition: border-color .15s;
+  }
+  .form-input:focus { border-color: var(--gold); }
+  .form-input::placeholder { color: var(--light); }
+  .form-note {
+    font-size: 11px; color: var(--mid); line-height: 1.5;
+    background: var(--gold-light); border-radius: 8px;
+    padding: 9px 12px; margin: 8px 0 4px;
+    border-left: 3px solid var(--gold);
+  }
+  .modal-divider {
+    border: none; border-top: 1px solid var(--divider); margin: 14px 0;
+  }
+  .modal-scroll {
+    max-height: 80vh; overflow-y: auto;
+    padding-right: 4px;
+  }
+  .modal-scroll::-webkit-scrollbar { width: 4px; }
+  .modal-scroll::-webkit-scrollbar-thumb { background: var(--divider); border-radius: 4px; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(28,28,30,0.6); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--paper); border-radius: 18px; padding: 32px 28px 28px;
+    max-width: 420px; width: 90%; border-top: 3px solid var(--gold);
+  }
+
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 28px; font-weight: 400;
+    color: var(--charcoal); text-align: center; letter-spacing: .08em; margin-bottom: 8px;
+  }
+  .modal-body {
+    font-size: 13px; color: var(--mid); text-align: center;
+    line-height: 1.8; margin-bottom: 20px;
+  }
+  .modal-body strong { color: var(--charcoal); font-weight: 500; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-cancel {
+    flex: 1; padding: 11px; background: none; border: 1px solid var(--divider);
+    border-radius: 10px; font-family: 'Raleway', sans-serif; font-size: 13px;
+    font-weight: 500; color: var(--mid); cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .modal-cancel:hover { border-color: var(--charcoal); color: var(--charcoal); }
+  .modal-confirm {
+    flex: 2; padding: 11px; background: var(--charcoal); border: none;
+    border-radius: 10px; font-family: 'Raleway', sans-serif; font-size: 13px;
+    font-weight: 600; color: var(--paper); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: background .15s;
+  }
+  .modal-confirm:hover { background: var(--charcoal-3); }
+
+  /* SUCCESS FULL-SCREEN OVERLAY */
+  .success-screen {
+    display: none;
+    position: fixed; inset: 0; z-index: 300;
+    background: var(--charcoal);
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px 24px;
+    animation: fadeInSuccess .5s ease forwards;
+  }
+  .success-screen.active { display: flex; }
+
+  @keyframes fadeInSuccess {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  .success-eyebrow {
+    font-family: 'Raleway', sans-serif; font-size: 11px; font-weight: 500;
+    letter-spacing: .25em; text-transform: uppercase; color: var(--gold);
+    margin-bottom: 12px;
+    animation: slideUp .4s .3s ease both;
+  }
+  .success-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: clamp(36px, 6vw, 64px);
+    font-weight: 400; color: var(--paper); letter-spacing: .06em;
+    line-height: 1.05; margin-bottom: 16px;
+    animation: slideUp .4s .35s ease both;
+  }
+  .success-sub {
+    font-size: 14px; color: var(--light); line-height: 1.8; max-width: 420px;
+    animation: slideUp .4s .4s ease both;
+  }
+  .success-sub strong { color: var(--paper); font-weight: 500; }
+
+  .success-divider {
+    width: 56px; height: 2px; margin: 28px auto;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    border: none; border-radius: 2px;
+    animation: slideUp .4s .45s ease both;
+  }
+
+  .success-details {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 24px;
+    margin-bottom: 32px;
+    animation: slideUp .4s .5s ease both;
+  }
+  .success-detail-chip {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 40px; padding: 8px 18px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--light);
+  }
+  .success-detail-chip i { font-size: 15px; color: var(--gold); }
+  .success-detail-chip span { color: var(--paper); font-weight: 500; }
+
+  .success-note {
+    font-size: 12px; color: var(--mid); max-width: 360px; line-height: 1.7;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-left: 3px solid var(--gold);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 32px;
+    animation: slideUp .4s .55s ease both;
+  }
+
+  .success-close-btn {
+    padding: 13px 36px; background: var(--gold); border: none;
+    border-radius: 10px; font-family: 'Raleway', sans-serif;
+    font-size: 14px; font-weight: 600; color: var(--charcoal);
+    cursor: pointer; letter-spacing: .04em;
+    transition: background .15s, transform .12s;
+    animation: slideUp .4s .6s ease both;
+  }
+  .success-close-btn:hover { background: #c9aa6a; transform: translateY(-1px); }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 700px) {
+    .layout { grid-template-columns: 1fr; padding: 16px; }
+    .page-title { display: none; }
+    .logo-img { height: 40px; }
+  }
+</style>
 </head>
 <body>
-  <div class="card">
-    <div class="status-badge">● API Active</div>
-    <h1>Framepoint Server</h1>
-    <p>The backend serverless API is online and ready for requests.</p>
-    <p>Health Endpoint: <code>/api/health</code></p>
-    <p>Booking Endpoint: <code>/api/booking</code></p>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="logo-wrap">
+    <svg width="22" height="26" viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+  <path d="M100,10 C55,10 28,45 28,78 C28,118 60,158 100,195 C140,158 172,118 172,78 C172,45 145,10 100,10Z" fill="none" stroke="white" stroke-width="6"/>
+  <circle cx="100" cy="88" r="48" fill="none" stroke="white" stroke-width="5"/>
+  <circle cx="100" cy="88" r="28" fill="none" stroke="white" stroke-width="3"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="white" transform="rotate(0,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="white" transform="rotate(60,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="white" transform="rotate(120,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="white" transform="rotate(180,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="white" transform="rotate(240,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="white" transform="rotate(300,100,88)"/>
+  <circle cx="100" cy="88" r="8" fill="white"/>
+  <circle cx="100" cy="88" r="4" fill="#1c1c1e"/>
+</svg>
+    <div style="margin-left:8px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;font-weight:400;color:#fff;letter-spacing:.15em;line-height:1.2;">FRAME-POINT</div>
+      <div style="font-family:'Raleway',sans-serif;font-size:7.5px;font-weight:500;color:#b89a5a;letter-spacing:.3em;text-transform:uppercase;margin-top:1px;">PHOTOGRAPHY</div>
+    </div>
   </div>
+  <div class="page-title">
+    <div class="page-title-main">Book Your Session</div>
+    <div class="page-title-sub">Select a date to get started</div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- CALENDAR CARD -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title" id="calMonth">June 2026</div>
+        <hr class="gold-rule">
+      </div>
+      <div class="cal-nav-wrap">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)" aria-label="Previous month"><i class="ti ti-arrow-left"></i></button>
+        <button class="cal-nav-btn" onclick="changeMonth(1)" aria-label="Next month"><i class="ti ti-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <div class="legend-title">Availability Legend</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--avail-bg);border:1px solid var(--avail-border);"></div>All Available</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--partial-bg);border:1px solid var(--partial-border);"></div>Partially Booked</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--full-bg);border:1px solid var(--full-border);"></div>Fully Booked</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--block-bg);border:1px solid var(--block-border);"></div>Blocked / Sunday</div>
+    </div>
+
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:6px;">Select a Date</div>
+    <hr class="gold-rule">
+
+    <div id="placeholder" class="right-placeholder">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 12px;opacity:0.25;">
+        <rect x="3" y="4" width="18" height="17" rx="2" stroke="#888" stroke-width="1.5" fill="none"/>
+        <line x1="3" y1="9" x2="21" y2="9" stroke="#888" stroke-width="1.5"/>
+        <line x1="8" y1="2" x2="8" y2="6" stroke="#888" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="16" y1="2" x2="16" y2="6" stroke="#888" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="8" cy="14" r="1" fill="#888"/>
+        <circle cx="12" cy="14" r="1" fill="#888"/>
+        <circle cx="16" cy="14" r="1" fill="#888"/>
+        <circle cx="8" cy="18" r="1" fill="#888"/>
+        <circle cx="12" cy="18" r="1" fill="#888"/>
+      </svg>
+      Please select a date from the calendar to proceed with your booking.
+    </div>
+
+    <div class="selected-info" id="selectedInfo">
+      <div class="detail-row">
+        <span class="detail-label">Date</span>
+        <span class="detail-val" id="selDate">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span id="selStatus"></span>
+      </div>
+
+      <!-- SESSION TYPE INPUT -->
+      <div class="input-section" id="inputSection">
+        <div class="input-label">What's the occasion?</div>
+        <input type="text" class="session-input" id="sessionInput"
+          placeholder="e.g. Birthday, Wedding, Debut, Graduation…"
+          oninput="updateBookBtn()" />
+      </div>
+
+      <!-- TIME PICKER -->
+      <div class="time-section" id="timeSection">
+        <div class="time-label">Select a Time Slot</div>
+        <div class="time-note">Mon – Sat &nbsp;·&nbsp; 7:00 AM – 12:00 MN</div>
+
+        <!-- Start Time collapsible -->
+        <div class="collapsible-header" id="startHeader" onclick="toggleCollapsible('start')">
+          <span class="collapsible-header-label">Start Time</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span class="collapsible-header-value" id="startValue"></span>
+            <span class="collapsible-arrow" id="startArrow">▼</span>
+          </span>
+        </div>
+        <div class="collapsible-body" id="startBody">
+          <div class="time-grid" id="startGrid"></div>
+        </div>
+
+        <!-- End Time collapsible -->
+        <div class="collapsible-header" id="endHeader" onclick="toggleCollapsible('end')">
+          <span class="collapsible-header-label">End Time</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span class="collapsible-header-value" id="endValue"></span>
+            <span class="collapsible-arrow" id="endArrow">▼</span>
+          </span>
+        </div>
+        <div class="collapsible-body" id="endBody">
+          <div class="time-grid" id="endGrid"></div>
+        </div>
+
+      </div>
+
+      <button class="book-btn" id="bookBtn" disabled>
+        Request Booking
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOOKING CONFIRMATION MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;">
+    <svg width="32" height="38" viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
+  <path d="M100,10 C55,10 28,45 28,78 C28,118 60,158 100,195 C140,158 172,118 172,78 C172,45 145,10 100,10Z" fill="none" stroke="#1c1c1e" stroke-width="6"/>
+  <circle cx="100" cy="88" r="48" fill="none" stroke="#1c1c1e" stroke-width="5"/>
+  <circle cx="100" cy="88" r="28" fill="none" stroke="#1c1c1e" stroke-width="3"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#1c1c1e" transform="rotate(0,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#1c1c1e" transform="rotate(60,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#1c1c1e" transform="rotate(120,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#1c1c1e" transform="rotate(180,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#1c1c1e" transform="rotate(240,100,88)"/>
+  <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#1c1c1e" transform="rotate(300,100,88)"/>
+  <circle cx="100" cy="88" r="8" fill="#1c1c1e"/>
+  <circle cx="100" cy="88" r="4" fill="white"/>
+</svg>
+    <div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:17px;font-weight:400;color:#1c1c1e;letter-spacing:.15em;line-height:1.2;">FRAME-POINT</div>
+      <div style="font-family:'Raleway',sans-serif;font-size:9px;font-weight:500;color:#b89a5a;letter-spacing:.3em;text-transform:uppercase;">PHOTOGRAPHY</div>
+    </div>
+  </div>
+    <div class="modal-title">Confirm Your Booking</div>
+    <div class="modal-scroll">
+      <div class="modal-body" style="margin-bottom:8px;">
+        You're requesting a session on<br>
+        <strong id="modalDate">—</strong> at <strong id="modalTime">—</strong><br>
+        <span style="margin-top:4px;display:inline-block;">Occasion: <strong id="modalOccasion">—</strong></span>
+      </div>
+
+      <hr class="modal-divider">
+
+      <div style="font-size:12px;font-weight:600;color:var(--charcoal);margin-bottom:10px;letter-spacing:.02em;">Your Details</div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input type="text" class="form-input" id="fieldFirstName" placeholder="Juan">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input type="text" class="form-input" id="fieldLastName" placeholder="Dela Cruz">
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-top:10px;">
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-input" id="fieldPhone" placeholder="+63 9XX XXX XXXX">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="fieldEmail" placeholder="you@email.com">
+        </div>
+      </div>
+
+      <div class="form-note">
+        📧 Your email will be used to send your <strong>booking confirmation</strong> once your schedule is approved, along with <strong>reminder notifications</strong> leading up to your session.
+      </div>
+
+      <hr class="modal-divider">
+
+      <div style="font-size:12px;font-weight:600;color:var(--charcoal);margin-bottom:10px;letter-spacing:.02em;">Event Location</div>
+
+      <div class="form-grid full">
+        <div class="form-group">
+          <label class="form-label">Full Address</label>
+          <input type="text" class="form-input" id="fieldCity" placeholder="e.g. The Grand Ballroom, 123 Rizal St., Quezon City">
+          <input type="hidden" id="fieldVenue" value="">
+          <input type="hidden" id="fieldAddress" value="">
+        </div>
+      </div>
+
+      <hr class="modal-divider">
+
+      <p style="font-size:12px;color:var(--mid);text-align:center;line-height:1.7;margin-bottom:14px;">
+        Once submitted, our team will review your request and send you an <strong style="color:var(--charcoal);">email confirmation of your approved schedule within the day.</strong> We look forward to capturing your special moments! 📸
+      </p>
+
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+        <button class="modal-confirm" id="confirmBtn" onclick="confirmBooking()">
+          <i class="ti ti-check" aria-hidden="true"></i> Confirm Request
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS FULL-SCREEN OVERLAY -->
+<div class="success-screen" id="successScreen">
+  <div style="margin-bottom:28px;animation:popIn .5s .2s cubic-bezier(.34,1.56,.64,1) both;">
+    <svg width="64" height="74" viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
+      <path d="M100,10 C55,10 28,45 28,78 C28,118 60,158 100,195 C140,158 172,118 172,78 C172,45 145,10 100,10Z" fill="none" stroke="#b89a5a" stroke-width="6"/>
+      <circle cx="100" cy="88" r="48" fill="none" stroke="#b89a5a" stroke-width="5"/>
+      <circle cx="100" cy="88" r="28" fill="none" stroke="#b89a5a" stroke-width="3"/>
+      <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#b89a5a" transform="rotate(0,100,88)"/>
+      <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#b89a5a" transform="rotate(60,100,88)"/>
+      <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#b89a5a" transform="rotate(120,100,88)"/>
+      <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#b89a5a" transform="rotate(180,100,88)"/>
+      <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#b89a5a" transform="rotate(240,100,88)"/>
+      <path d="M100,70 C105,78 106,88 103,94 C101,97 99,97 97,94 C94,88 95,78 100,70Z" fill="#b89a5a" transform="rotate(300,100,88)"/>
+      <circle cx="100" cy="88" r="8" fill="#b89a5a"/>
+      <circle cx="100" cy="88" r="4" fill="#1c1c1e"/>
+    </svg>
+  </div>
+  <div class="success-eyebrow">Frame-Point Photography</div>
+  <div class="success-title">Your Appointment<br>Has Been Requested!</div>
+  <div class="success-sub">
+    Thank you, <strong id="successName">there</strong>! Your booking request has been successfully submitted.
+  </div>
+  <hr class="success-divider">
+  <div class="success-details">
+    <div class="success-detail-chip">
+      <i class="ti ti-calendar"></i>
+      <span id="successDate">—</span>
+    </div>
+    <div class="success-detail-chip">
+      <i class="ti ti-clock"></i>
+      <span id="successTime">—</span>
+    </div>
+    <div class="success-detail-chip">
+      <i class="ti ti-sparkles"></i>
+      <span id="successOccasion">—</span>
+    </div>
+  </div>
+    <div class="success-note">
+    <span style="display:flex;align-items:flex-start;gap:10px;">
+      <i class="ti ti-mail" style="font-size:16px;color:var(--gold);margin-top:2px;flex-shrink:0;"></i>
+      <span>Our team will review your request and send you an <strong style="color:var(--light);">email confirmation to <span id="successEmail">your inbox</span></strong> once your schedule is approved — usually within the day. Please also check your <strong style="color:var(--light);">spam or junk folder</strong> just in case.</span>
+    </span>
+  </div>
+  <button class="success-close-btn" onclick="closeSuccessScreen()">
+    Back to Calendar
+  </button>
+</div>
+
+<script>
+  const monthNames = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+
+  // ── EDIT AVAILABILITY HERE ──────────────────────────────────────────────
+  // Key format: 'YYYY-M-D'  (no leading zeros)
+  // Values: 'avail' | 'partial' | 'full' | 'blocked'
+  // 'partial' = some time slots taken but day still open
+  // Sundays are auto-blocked. Dates not listed default to 'avail'.
+  const availability = {
+    // '2026-6-10': 'partial',
+    // '2026-6-15': 'full',
+    // '2026-6-22': 'blocked',
+  };
+
+  // For 'partial' days, list which time slots are already taken
+  const takenSlots = {
+    // '2026-6-10': ['9:00 AM', '10:00 AM', '2:00 PM'],
+  };
+  // ────────────────────────────────────────────────────────────────────────
+
+  const timeSlots = [
+    '7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM',
+    '1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM',
+    '7:00 PM','8:00 PM','9:00 PM','10:00 PM','11:00 PM','12:00 MN'
+  ];
+
+  let selectedStart = null;
+  let selectedEnd   = null;
+
+  function toggleCollapsible(which) {
+    const body  = document.getElementById(which + 'Body');
+    const arrow = document.getElementById(which + 'Arrow');
+    const isOpen = body.classList.contains('open');
+    // Close both first
+    document.getElementById('startBody').classList.remove('open');
+    document.getElementById('endBody').classList.remove('open');
+    document.getElementById('startArrow').classList.remove('open');
+    document.getElementById('endArrow').classList.remove('open');
+    if (!isOpen) {
+      body.classList.add('open');
+      arrow.classList.add('open');
+    }
+  }
+
+  function populateTimeDropdowns(takenList) {
+    const startGrid = document.getElementById('startGrid');
+    const endGrid   = document.getElementById('endGrid');
+    startGrid.innerHTML = '';
+    endGrid.innerHTML   = '';
+    selectedStart = null; selectedEnd = null;
+    document.getElementById('startValue').textContent = '';
+    document.getElementById('endValue').textContent   = '';
+    document.getElementById('startHeader').classList.remove('has-value');
+    document.getElementById('endHeader').classList.remove('has-value');
+
+    timeSlots.forEach(t => {
+      const isTaken = takenList.includes(t);
+
+      // Start grid slot
+      const ss = document.createElement('div');
+      ss.className = 'time-slot' + (isTaken ? ' taken' : '');
+      ss.textContent = isTaken ? t + ' ✕' : t;
+      if (!isTaken) {
+        ss.addEventListener('click', () => {
+          document.querySelectorAll('#startGrid .time-slot').forEach(s => s.classList.remove('active'));
+          ss.classList.add('active');
+          selectedStart = t;
+          document.getElementById('startValue').textContent = t;
+          document.getElementById('startHeader').classList.add('has-value');
+          // Auto close start, open end
+          document.getElementById('startBody').classList.remove('open');
+          document.getElementById('startArrow').classList.remove('open');
+          document.getElementById('endBody').classList.add('open');
+          document.getElementById('endArrow').classList.add('open');
+          updateBookBtn();
+        });
+      }
+      startGrid.appendChild(ss);
+
+      // End grid slot
+      const es = document.createElement('div');
+      es.className = 'time-slot' + (isTaken ? ' taken' : '');
+      es.textContent = isTaken ? t + ' ✕' : t;
+      if (!isTaken) {
+        es.addEventListener('click', () => {
+          document.querySelectorAll('#endGrid .time-slot').forEach(s => s.classList.remove('active'));
+          es.classList.add('active');
+          selectedEnd = t;
+          document.getElementById('endValue').textContent = t;
+          document.getElementById('endHeader').classList.add('has-value');
+          // Auto close end
+          document.getElementById('endBody').classList.remove('open');
+          document.getElementById('endArrow').classList.remove('open');
+          updateBookBtn();
+        });
+      }
+      endGrid.appendChild(es);
+    });
+  }
+
+  function onTimeChange() {}
+
+  const meta = {
+    'avail':   { label: 'All Available',     badge: 'badge-avail' },
+    'partial': { label: 'Partially Booked',  badge: 'badge-partial' },
+    'full':    { label: 'Fully Booked',      badge: 'badge-full' },
+    'blocked': { label: 'Blocked',           badge: 'badge-block' },
+    'sunday':  { label: 'Closed on Sundays', badge: 'badge-block' },
+  };
+
+  let currentYear = 2026, currentMonth = 5;
+  let selectedCell = null;
+  let selectedTime = null;
+  let currentDateKey = null;
+
+  function buildCalendar(year, month) {
+    const grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+    document.getElementById('calMonth').textContent = monthNames[month] + ' ' + year;
+    document.getElementById('placeholder').style.display = 'block';
+    document.getElementById('selectedInfo').classList.remove('active');
+    selectedCell = null; selectedTime = null; currentDateKey = null;
+
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(h => {
+      const d = document.createElement('div');
+      d.className = 'day-header'; d.textContent = h; grid.appendChild(d);
+    });
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+
+    for (let i = 0; i < firstDay; i++) {
+      const e = document.createElement('div'); e.className = 'day-cell empty'; grid.appendChild(e);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isSunday = new Date(year, month, d).getDay() === 0;
+      const key = year + '-' + (month + 1) + '-' + d;
+      const status = isSunday ? 'sunday' : (availability[key] || 'avail');
+      const cell = document.createElement('div');
+      cell.className = 'day-cell ' + status;
+      cell.textContent = d;
+      const isToday = (today.getFullYear() === year && today.getMonth() === month && today.getDate() === d);
+      if (isToday) cell.classList.add('today');
+      if (!isSunday && status !== 'blocked') {
+        cell.addEventListener('click', () => selectDay(d, status, cell, year, month));
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  function buildTimeGrid(key, status) {
+    selectedTime = null; selectedStart = null; selectedEnd = null;
+    const taken = takenSlots[key] || [];
+    populateTimeDropdowns(taken);
+    // Close both collapsibles, open start by default
+    document.getElementById('startBody').classList.add('open');
+    document.getElementById('startArrow').classList.add('open');
+    document.getElementById('endBody').classList.remove('open');
+    document.getElementById('endArrow').classList.remove('open');
+    updateBookBtn();
+  }
+
+  function updateBookBtn() {
+    const btn = document.getElementById('bookBtn');
+    const status = btn.dataset.status || '';
+    const occasion = document.getElementById('sessionInput').value.trim();
+    const notBookable = (status === 'full' || status === 'blocked' || status === 'sunday');
+    selectedTime = (selectedStart && selectedEnd) ? selectedStart + ' – ' + selectedEnd : null;
+    btn.disabled = notBookable || !selectedStart || !selectedEnd || !occasion;
+  }
+
+  function selectDay(d, status, cell, year, month) {
+    if (selectedCell) selectedCell.classList.remove('selected');
+    cell.classList.add('selected');
+    selectedCell = cell;
+    currentDateKey = year + '-' + (month + 1) + '-' + d;
+
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('selectedInfo').classList.add('active');
+    document.getElementById('selDate').textContent = monthNames[month] + ' ' + d + ', ' + year;
+    document.getElementById('sessionInput').value = '';
+
+    const m = meta[status];
+    document.getElementById('selStatus').innerHTML =
+      '<span class="status-badge ' + m.badge + '">' + m.label + '</span>';
+
+    const btn = document.getElementById('bookBtn');
+    btn.dataset.status = status;
+    btn.dataset.date = monthNames[month] + ' ' + d + ', ' + year;
+
+    const isBookable = (status !== 'full' && status !== 'blocked');
+    document.getElementById('timeSection').style.display = isBookable ? 'block' : 'none';
+    document.getElementById('inputSection').style.display = isBookable ? 'block' : 'none';
+
+    if (isBookable) buildTimeGrid(currentDateKey, status);
+    else selectedTime = null;
+
+    updateBookBtn();
+    btn.onclick = () => {
+      const occasion = document.getElementById('sessionInput').value.trim();
+      if (!selectedTime || !occasion) return;
+      openModal(btn.dataset.date, selectedTime, occasion);
+    };
+  }
+
+  function openModal(dateStr, timeStr, occasion) {
+    document.getElementById('modalDate').textContent = dateStr;
+    document.getElementById('modalTime').textContent = timeStr;
+    document.getElementById('modalOccasion').textContent = occasion;
+    document.getElementById('modalOverlay').classList.add('active');
+  }
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+    ['fieldFirstName','fieldLastName','fieldPhone','fieldEmail','fieldVenue','fieldAddress','fieldCity'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.value = ''; el.style.borderColor = ''; }
+    });
+  }
+  const SERVER_URL = window.location.origin.startsWith('http') ? window.location.origin : 'https://framepoint-server.vercel.app';
+
+  async function confirmBooking() {
+    const first  = document.getElementById('fieldFirstName').value.trim();
+    const last   = document.getElementById('fieldLastName').value.trim();
+    const phone  = document.getElementById('fieldPhone').value.trim();
+    const email  = document.getElementById('fieldEmail').value.trim();
+    const city   = document.getElementById('fieldCity').value.trim();
+
+    if (!first || !last || !phone || !email || !city) {
+      ['fieldFirstName','fieldLastName','fieldPhone','fieldEmail','fieldCity'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el.value.trim()) {
+          el.style.borderColor = '#c0392b';
+          el.addEventListener('input', () => el.style.borderColor = '', { once: true });
+        }
+      });
+      return;
+    }
+
+    // Disable button and show loading
+    const btn = document.getElementById('confirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Sending...';
+
+    // Calculate duration in HH:mm format
+    function parseTo24h(t) {
+      const [time, period] = t.split(' ');
+      let [h, m] = time.split(':').map(Number);
+      if (period === 'PM' && h !== 12) h += 12;
+      if (period === 'AM' && h === 12) h = 0;
+      if (t === '12:00 MN') { h = 24; m = 0; }
+      return h * 60 + (m || 0);
+    }
+    let duration = '02:00';
+    if (selectedStart && selectedEnd) {
+      const diffMins = parseTo24h(selectedEnd) - parseTo24h(selectedStart);
+      if (diffMins > 0) {
+        const hh = String(Math.floor(diffMins / 60)).padStart(2, '0');
+        const mm = String(diffMins % 60).padStart(2, '0');
+        duration = hh + ':' + mm;
+      }
+    }
+
+    // Convert "June 15, 2026" + "9:00 AM" → "2026-06-15T09:00:00" (GMT+8 Manila)
+    function toISO(dateStr, timeStr) {
+      const dt = new Date(`${dateStr} ${timeStr}`);
+      dt.setHours(dt.getHours() + 8);
+      return dt.toISOString().slice(0, 19);
+    }
+
+    const rawDate = document.getElementById('modalDate').textContent;
+
+    const payload = {
+      firstName: first,
+      lastName:  last,
+      phone,
+      email,
+      date:      rawDate,
+      time:      document.getElementById('modalTime').textContent,
+      occasion:  document.getElementById('modalOccasion').textContent,
+      venue:     document.getElementById('fieldVenue').value.trim(),
+      address:   document.getElementById('fieldAddress').value.trim(),
+      city,
+      duration,
+      startTime: selectedStart ? toISO(rawDate, selectedStart) : '',
+      endTime:   selectedEnd   ? toISO(rawDate, selectedEnd)   : '',
+    };
+
+    try {
+      const res = await fetch(SERVER_URL + '/api/booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeModal();
+        // Populate success screen with booking info
+        document.getElementById('successName').textContent = first;
+        document.getElementById('successDate').textContent = payload.date;
+        document.getElementById('successTime').textContent = payload.time;
+        document.getElementById('successOccasion').textContent = payload.occasion;
+        document.getElementById('successEmail').textContent = payload.email;
+        document.getElementById('successScreen').classList.add('active');
+      } else {
+        throw new Error(data.error || 'Server error');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-check"></i> Confirm Request';
+      alert('Could not submit booking. Please try again.\n\nError: ' + err.message);
+    }
+  }
+
+  document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  function closeSuccessScreen() {
+    document.getElementById('successScreen').classList.remove('active');
+    // Reset the calendar view
+    buildCalendar(currentYear, currentMonth);
+  }
+
+  function changeMonth(dir) {
+    currentMonth += dir;
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+    buildCalendar(currentYear, currentMonth);
+
+  // ── Warm up Railway server on page load so it's ready when client submits ──
+  setTimeout(() => {
+    fetch(SERVER_URL + '/api/health').catch(() => {});
+  }, 1000);
+  }
+
+  buildCalendar(currentYear, currentMonth);
+</script>
 </body>
 </html>
